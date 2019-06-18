@@ -1,0 +1,96 @@
+plugins {
+    id 'java'
+    id 'com.gradle.build-scan' version '2.0.2'
+    id 'org.springframework.boot' version '2.1.5.RELEASE'
+    id 'io.spring.dependency-management' version '1.0.7.RELEASE'
+    id 'de.fuerstenau.buildconfig' version '1.1.8'
+}
+
+group 'pl.draciel.slackify'
+version '1.0'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+    maven { url "https://dl.bintray.com/jerady/maven" }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+// Add 'gen' directory to main source sets so IDE doesn't complain for unknown references
+sourceSets.main.java {
+    srcDir new File(buildDir, 'gen')
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    implementation 'org.springframework.boot:spring-boot-dependencies:2.1.5.RELEASE'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'com.squareup.retrofit2:retrofit:2.5.0'
+    implementation 'com.squareup.retrofit2:converter-jackson:2.5.0'
+    implementation 'com.squareup.retrofit2:adapter-rxjava2:2.5.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.0.0-alpha01'
+    implementation 'com.squareup.okhttp3:okhttp:4.0.0-alpha01'
+    implementation 'com.squareup.okio:okio:2.2.2'
+    implementation 'io.reactivex.rxjava2:rxjava:2.1.13'
+    implementation 'com.google.code.findbugs:jsr305:3.0.1'
+    implementation 'com.h2database:h2'
+    implementation 'org.hibernate:hibernate-core'
+    implementation 'org.hibernate:hibernate-entitymanager'
+    implementation 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    components {
+        withModule('org.springframework:spring-beans') {
+            allVariants {
+                withDependencyConstraints {
+                    // Need to patch constraints because snakeyaml is an optional dependency
+                    it.findAll { it.name == 'snakeyaml' }.each { it.version { strictly '1.19' } }
+                }
+            }
+        }
+    }
+}
+
+buildConfig {
+    buildConfigField "String", "SPOTIFY_CLIENT_ID", getValueFromLocalProperties("spotifyClientId", "")
+    buildConfigField "String", "SPOTIFY_CLIENT_SECRET", getValueFromLocalProperties("spotifyClientSecret", "")
+    buildConfigField "String", "REDIRECT_URI", getValueFromLocalProperties("redirectUri", "")
+    buildConfigField "String", "USER_ID", getValueFromLocalProperties("userId", "")
+    buildConfigField "String", "PLAYLIST_URL", getValueFromLocalProperties("playlistUrl", "")
+    buildConfigField "String", "PLAYLIST_ID", getValueFromLocalProperties("playlistId", "")
+    buildConfigField "String", "TEAM_ID", getValueFromLocalProperties("teamId", "")
+    buildConfigField "String", "SLACK_TOKEN", getValueFromLocalProperties("slackToken", "")
+}
+
+
+String getValueFromLocalProperties(String key, String defaultValue) {
+    def localProperties = rootProject.file("local.properties")
+    if (localProperties.exists()) {
+        def props = new Properties()
+        props.load(new FileInputStream(localProperties))
+        if (props[key] != null) {
+            return props[key]
+        }
+        return defaultValue
+    }
+    return defaultValue
+}
+
+task generateCompileBuildConfig(type: GradleBuild) {
+    tasks = ['generateBuildConfig', 'compileBuildConfig']
+}
+
+build dependsOn: 'generateCompileBuildConfig'
+
+
+

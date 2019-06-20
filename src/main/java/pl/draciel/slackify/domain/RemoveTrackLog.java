@@ -6,8 +6,7 @@ import pl.draciel.slackify.utility.LocalDateTimeAttributeConverter;
 
 import javax.annotation.Nonnull;
 import javax.persistence.*;
-import javax.validation.constraints.NotNull;
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 
 @Data
 @Wither
@@ -37,11 +36,11 @@ public class RemoveTrackLog {
     @Nonnull
     @Column(name = "removed_at")
     @Convert(converter = LocalDateTimeAttributeConverter.class)
-    private ZonedDateTime removedAt;
+    private LocalDateTime removedAt;
 
     @Nonnull
     public static RemoveTrackLog of(@Nonnull final String requestingUser, @Nonnull final String slackUserId,
-                                    @Nonnull final String request, @Nonnull final ZonedDateTime removingDate) {
+                                    @Nonnull final String request, @Nonnull final LocalDateTime  removingDate) {
         return new RemoveTrackLog(0, requestingUser, slackUserId, request, removingDate);
     }
 }

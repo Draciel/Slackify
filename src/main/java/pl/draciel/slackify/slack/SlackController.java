@@ -17,7 +17,7 @@ import pl.draciel.slackify.spotify.model.Track;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.util.Locale;
 
 @Slf4j
@@ -65,7 +65,7 @@ class SlackController {
                         body.getParameters()))))
                 .flatMapSingle(spotifyFacade::addToPlaylist)
                 .flatMap(track -> slackFacade.saveAddTrackLog(AddTrackLog.of(body.getUserName(), body.getUserId(),
-                        body.getParameters(), track.getSpotifyId(), ZonedDateTime.now()))
+                        body.getParameters(), track.getSpotifyId(), LocalDateTime.now()))
                         .andThen(slackFacade.saveUser(User.of(body.getUserName(), body.getUserId())))
                         .andThen(Single.just(String.format(Locale.ENGLISH, "%1$s by %2$s has been added to playlist!",
                                 track.getName(), track.getArtist()))));
@@ -117,7 +117,7 @@ class SlackController {
                 .flatMapCompletable(log -> spotifyFacade.removeFromPlaylist(position)
                         .flatMapCompletable(f -> slackFacade.removeAddTrackLog(log)))
                 .andThen(slackFacade.saveRemoveTrackLog(RemoveTrackLog.of(body.getUserName(), body.getUserId(),
-                        body.getParameters(), ZonedDateTime.now())))
+                        body.getParameters(), LocalDateTime.now())))
                 .andThen(Single.just(
                         String.format(Locale.ENGLISH, "Track on position %1$s has been removed.", position + 1)));
     }

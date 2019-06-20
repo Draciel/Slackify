@@ -6,8 +6,7 @@ import pl.draciel.slackify.utility.LocalDateTimeAttributeConverter;
 
 import javax.annotation.Nonnull;
 import javax.persistence.*;
-import javax.validation.constraints.NotNull;
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 
 @Data
 @Wither
@@ -42,7 +41,7 @@ public class AddTrackLog {
     @Nonnull
     @Column(name = "added_at")
     @Convert(converter = LocalDateTimeAttributeConverter.class)
-    private ZonedDateTime addedAt;
+    private LocalDateTime addedAt;
 
     @Nonnull
     @Column(name = "deleted")
@@ -50,7 +49,7 @@ public class AddTrackLog {
 
     @Nonnull
     public static AddTrackLog of(@Nonnull String requestingUser, @Nonnull String slackUserId, @Nonnull String request,
-                                 String spotifyId, @Nonnull ZonedDateTime addingDate) {
+                                 String spotifyId, @Nonnull LocalDateTime addingDate) {
         return new AddTrackLog(0, requestingUser, slackUserId, request, spotifyId, addingDate, false);
     }
 }

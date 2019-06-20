@@ -44,12 +44,12 @@ interface SpotifyService {
     @POST
     @FormUrlEncoded
     Single<AuthorizationCodeResponse> grantTokens(@Url String url,
-            @Header("Authorization") String basic, @Field("grant_type") TokenGrantTypes grantTypes,
+            @Header("Authorization") String basic, @Field("grant_type") SpotifyTokenGrantTypes grantTypes,
             @Field("code") String code, @Field("redirect_uri") String redirectUri);
 
     @POST
     @FormUrlEncoded
     Single<AuthorizationCodeResponse> refreshToken(@Url String url,
-            @Header("Authorization") String basic, @Field("grant_type") TokenGrantTypes grantTypes,
+            @Header("Authorization") String basic, @Field("grant_type") SpotifyTokenGrantTypes grantTypes,
             @Field("refresh_token") String refreshToken);
 }

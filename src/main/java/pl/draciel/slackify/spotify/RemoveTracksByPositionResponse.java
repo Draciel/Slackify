@@ -1,16 +1,16 @@
 package pl.draciel.slackify.spotify;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.experimental.Wither;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
 @Data
-@Wither
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 class RemoveTracksByPositionResponse {
 
     //fixme add nonnulls

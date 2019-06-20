@@ -2,14 +2,14 @@ package pl.draciel.slackify.spotify;
 
 import javax.annotation.Nonnull;
 
-enum TokenGrantTypes {
+enum SpotifyTokenGrantTypes {
 
     AUTHORIZATION_CODE("authorization_code"), REFRESH_TOKEN("refresh_token");
 
     @Nonnull
     private final String type;
 
-    TokenGrantTypes(@Nonnull final String type) {
+    SpotifyTokenGrantTypes(@Nonnull final String type) {
         this.type = type;
     }
 

@@ -118,7 +118,7 @@ public class SpotifyFacade {
             return Single.error(new IllegalArgumentException("Invalid Request State"));
         }
         return service.grantTokens(SpotifyService.TOKENS_URL, encodeHeader(config.getSpotifyClientId(),
-                config.getSpotifyClientSecret()), TokenGrantTypes.AUTHORIZATION_CODE, code, config.getRedirectUri())
+                config.getSpotifyClientSecret()), SpotifyTokenGrantTypes.AUTHORIZATION_CODE, code, config.getRedirectUri())
                 .map(response -> new OAuth2Token(response.getAccessToken(), response.getRefreshToken(),
                         LocalDateTime.now().plusSeconds(response.getExpiresIn())))
                 .flatMapCompletable(token -> Completable.fromAction(() -> updateCredentials(token)))
@@ -176,7 +176,7 @@ public class SpotifyFacade {
         return service.refreshToken(SpotifyService.TOKENS_URL, "Basic " + new String(Base64Utils
                         .encode((config.getSpotifyClientId() + ":" + config.getSpotifyClientSecret())
                                 .getBytes())),
-                TokenGrantTypes.REFRESH_TOKEN, tokenStore.getOAuthToken().getRefreshToken());
+                SpotifyTokenGrantTypes.REFRESH_TOKEN, tokenStore.getOAuthToken().getRefreshToken());
     }
 
     private Single<Boolean> isAuthorised() {

@@ -11,6 +11,21 @@ class AppConfig {
     @Bean
     @Nonnull
     Config config() {
+        final boolean usesRuntimeVars = Boolean.parseBoolean(System.getenv(AppKeys.USES_RUNTIME_VARS));
+
+        if (usesRuntimeVars) {
+            return Config.builder()
+                    .spotifyClientId(System.getenv(AppKeys.SPOTIFY_CLIENT_ID))
+                    .spotifyClientSecret(System.getenv(AppKeys.SPOTIFY_CLIENT_SECRET))
+                    .redirectUri(System.getenv(AppKeys.REDIRECT_URI))
+                    .userId(System.getenv(AppKeys.USER_ID))
+                    .playlistUrl(System.getenv(AppKeys.PLAYLIST_URL))
+                    .playlistId(System.getenv(AppKeys.PLAYLIST_ID))
+                    .teamId(System.getenv(AppKeys.TEAM_ID))
+                    .slackToken(System.getenv(AppKeys.SLACK_TOKEN))
+                    .build();
+        }
+
         return Config.builder()
                 .spotifyClientId(BuildConfig.SPOTIFY_CLIENT_ID)
                 .spotifyClientSecret(BuildConfig.SPOTIFY_CLIENT_SECRET)
@@ -22,5 +37,4 @@ class AppConfig {
                 .slackToken(BuildConfig.SLACK_TOKEN)
                 .build();
     }
-
 }

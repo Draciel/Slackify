@@ -62,14 +62,15 @@ dependencies {
 }
 
 buildConfig {
-    buildConfigField "String", "SPOTIFY_CLIENT_ID", getValueFromLocalProperties("spotifyClientId", "")
-    buildConfigField "String", "SPOTIFY_CLIENT_SECRET", getValueFromLocalProperties("spotifyClientSecret", "")
-    buildConfigField "String", "REDIRECT_URI", getValueFromLocalProperties("redirectUri", "")
-    buildConfigField "String", "USER_ID", getValueFromLocalProperties("userId", "")
-    buildConfigField "String", "PLAYLIST_URL", getValueFromLocalProperties("playlistUrl", "")
-    buildConfigField "String", "PLAYLIST_ID", getValueFromLocalProperties("playlistId", "")
-    buildConfigField "String", "TEAM_ID", getValueFromLocalProperties("teamId", "")
-    buildConfigField "String", "SLACK_TOKEN", getValueFromLocalProperties("slackToken", "")
+    // this need to be in sync with AppKeys class
+    buildConfigField "String", "SPOTIFY_CLIENT_ID", getValueFromLocalProperties("APP_KEYS_SPOTIFY_CLIENT_ID", "")
+    buildConfigField "String", "SPOTIFY_CLIENT_SECRET", getValueFromLocalProperties("APP_KEYS_SPOTIFY_CLIENT_SECRET", "")
+    buildConfigField "String", "REDIRECT_URI", getValueFromLocalProperties("APP_KEYS_REDIRECT_URI", "")
+    buildConfigField "String", "USER_ID", getValueFromLocalProperties("APP_KEYS_USER_ID", "")
+    buildConfigField "String", "PLAYLIST_URL", getValueFromLocalProperties("APP_KEYS_PLAYLIST_URL", "")
+    buildConfigField "String", "PLAYLIST_ID", getValueFromLocalProperties("APP_KEYS_PLAYLIST_ID", "")
+    buildConfigField "String", "TEAM_ID", getValueFromLocalProperties("APP_KEYS_TEAM_ID", "")
+    buildConfigField "String", "SLACK_TOKEN", getValueFromLocalProperties("APP_KEYS_SLACK_TOKEN", "")
 }
 
 
@@ -90,7 +91,7 @@ task generateCompileBuildConfig(type: GradleBuild) {
     tasks = ['generateBuildConfig', 'compileBuildConfig']
 }
 
-build dependsOn: 'generateCompileBuildConfig'
+build.dependsOn 'generateCompileBuildConfig'
 
 
 

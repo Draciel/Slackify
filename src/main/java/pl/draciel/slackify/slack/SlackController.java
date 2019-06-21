@@ -29,68 +29,26 @@ public class SlackController {
     private final SlackFacade slackFacade;
 
     @PostMapping(value = "/add", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    Single<String> addTrack(@RequestParam String token,
-                            @RequestParam("team_id") String teamId,
-                            @RequestParam("team_domain") String teamDomain,
-                            @RequestParam("channel_id") String channelId,
-                            @RequestParam("channel_name") String channelName,
-                            @RequestParam("user_id") String userId,
-                            @RequestParam("user_name") String userName, @RequestParam String command,
-                            @RequestParam String text, @RequestParam("response_url") String responseUrl) {
-
-        final SlackRequestBody body = SlackRequestBody.builder()
-                .slackToken(token)
-                .teamId(teamId)
-                .teamDomain(teamDomain)
-                .channelId(channelId)
-                .channelName(channelName)
-                .userId(userId)
-                .userName(userName)
-                .command(command)
-                .parameters(text)
-                .responseUrl(responseUrl)
-                .build();
-
-        return Single.fromCallable(() -> parseRequestParameters(body))
-                .compose(slackFacade.slackRequestValidator(body))
+    Single<String> addTrack(@RequestBody @Nonnull final SlashCommand command) {
+        return Single.fromCallable(() -> parseRequestParameters(command))
+                .compose(slackFacade.slackRequestValidator(command))
                 .flatMapObservable(spotifyFacade::searchTrack)
                 .firstElement()
                 .switchIfEmpty(Maybe.error(new TrackNotFound(String.format(Locale.ENGLISH, "\"%1$s\" not found",
-                        body.getParameters()))))
+                        command.getParameters()))))
                 .flatMapSingle(spotifyFacade::addToPlaylist)
-                .flatMap(track -> slackFacade.saveAddTrackLog(AddTrackLog.of(body.getUserName(), body.getUserId(),
-                        body.getParameters(), track.getSpotifyId(), LocalDateTime.now()))
-                        .andThen(slackFacade.saveUser(User.of(body.getUserName(), body.getUserId())))
+                .flatMap(track -> slackFacade.saveAddTrackLog(AddTrackLog.of(command.getUserName(), command.getUserId(),
+                        command.getParameters(), track.getSpotifyId(), LocalDateTime.now()))
+                        .andThen(slackFacade.saveUser(User.of(command.getUserName(), command.getUserId())))
                         .andThen(Single.just(String.format(Locale.ENGLISH, "%1$s by %2$s has been added to playlist!",
                                 track.getName(), track.getArtist()))))
                 .compose(errorMessageRetriever());
     }
 
     @PostMapping(value = "/remove", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    Single<String> removeTrack(@RequestParam String token,
-                               @RequestParam("team_id") String teamId,
-                               @RequestParam("team_domain") String teamDomain,
-                               @RequestParam("channel_id") String channelId,
-                               @RequestParam("channel_name") String channelName,
-                               @RequestParam("user_id") String userId,
-                               @RequestParam("user_name") String userName, @RequestParam String command,
-                               @RequestParam String text, @RequestParam("response_url") String responseUrl) {
-
-        final SlackRequestBody body = SlackRequestBody.builder()
-                .slackToken(token)
-                .teamId(teamId)
-                .teamDomain(teamDomain)
-                .channelId(channelId)
-                .channelName(channelName)
-                .userId(userId)
-                .userName(userName)
-                .command(command)
-                .parameters(text)
-                .responseUrl(responseUrl)
-                .build();
-
-        return Single.fromCallable(() -> parseRequestSongPosition(body))
-                .compose(slackFacade.slackRequestValidator(body))
+    Single<String> removeTrack(@RequestBody @Nonnull final SlashCommand command) {
+        return Single.fromCallable(() -> parseRequestSongPosition(command))
+                .compose(slackFacade.slackRequestValidator(command))
                 .flatMap(pos -> spotifyFacade.getTrackByPosition(pos)
                         .flatMapPublisher(track -> slackFacade.findAddTrackLogsBySpotifyId(track.getSpotifyId()))
                         .switchIfEmpty(Flowable.error(new IllegalArgumentException(
@@ -99,7 +57,7 @@ public class SlackController {
                                         + " to force remove it ¯\\_(ツ)_/¯")))
                         .toList()
                         .flatMapObservable(logs -> Observable.fromIterable(logs)
-                                .filter(addTrackLog -> addTrackLog.getSlackUserId().equals(body.getUserId()))
+                                .filter(addTrackLog -> addTrackLog.getSlackUserId().equals(command.getUserId()))
                                 .switchIfEmpty(slackFacade.findUserBySlackId(logs.get(0).getSlackUserId())
                                         .flatMapObservable(
                                                 u -> Observable.<AddTrackLog>error(new IllegalAccessException(
@@ -111,38 +69,17 @@ public class SlackController {
                         .flatMapCompletable(log -> spotifyFacade.removeFromPlaylist(pos)
                                 .flatMapCompletable(f -> slackFacade.removeAddTrackLog(log)))
                         .andThen(slackFacade.saveRemoveTrackLog(
-                                RemoveTrackLog.of(body.getUserName(), body.getUserId(),
-                                        body.getParameters(), LocalDateTime.now())))
+                                RemoveTrackLog.of(command.getUserName(), command.getUserId(),
+                                        command.getParameters(), LocalDateTime.now())))
                         .andThen(Single.just(
                                 String.format(Locale.ENGLISH, "Track on position %1$s has been removed.", pos + 1)))
                         .compose(errorMessageRetriever()));
     }
 
     @PostMapping(value = "/playlist", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    protected Single<String> playlist(@RequestParam String token,
-                                      @RequestParam("team_id") String teamId,
-                                      @RequestParam("team_domain") String teamDomain,
-                                      @RequestParam("channel_id") String channelId,
-                                      @RequestParam("channel_name") String channelName,
-                                      @RequestParam("user_id") String userId,
-                                      @RequestParam("user_name") String userName, @RequestParam String command,
-                                      @RequestParam String text, @RequestParam("response_url") String responseUrl) {
-
-        final SlackRequestBody body = SlackRequestBody.builder()
-                .slackToken(token)
-                .teamId(teamId)
-                .teamDomain(teamDomain)
-                .channelId(channelId)
-                .channelName(channelName)
-                .userId(userId)
-                .userName(userName)
-                .command(command)
-                .parameters(text)
-                .responseUrl(responseUrl)
-                .build();
-
+    protected Single<String> playlist(@RequestBody @Nonnull final SlashCommand command) {
         return spotifyFacade.getPlaylistUrl()
-                .compose(slackFacade.slackRequestValidator(body))
+                .compose(slackFacade.slackRequestValidator(command))
                 .compose(errorMessageRetriever());
     }
 
@@ -158,8 +95,8 @@ public class SlackController {
                 });
     }
 
-    private static Track parseRequestParameters(@Nonnull final SlackRequestBody body) {
-        final String parameters = body.getParameters();
+    private static Track parseRequestParameters(@Nonnull final SlashCommand command) {
+        final String parameters = command.getParameters();
         final String[] parts = parameters.split("-");
 
         if (parts.length == 1) {
@@ -177,8 +114,8 @@ public class SlackController {
         return new Track(parts[0].trim(), parts[1].trim(), null);
     }
 
-    private static Integer parseRequestSongPosition(@Nonnull final SlackRequestBody body) {
-        final String parameters = body.getParameters();
+    private static Integer parseRequestSongPosition(@Nonnull final SlashCommand command) {
+        final String parameters = command.getParameters();
         int pos = 0;
         try {
             pos = Integer.parseInt(parameters);

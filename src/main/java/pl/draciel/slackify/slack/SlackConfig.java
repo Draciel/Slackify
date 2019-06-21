@@ -4,6 +4,9 @@ import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import pl.draciel.slackify.Config;
 import pl.draciel.slackify.security.OAuth2Interceptor;
 import retrofit2.Retrofit;
@@ -11,6 +14,8 @@ import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.jackson.JacksonConverterFactory;
 
 import javax.annotation.Nonnull;
+import java.util.Collections;
+import java.util.List;
 
 @Configuration
 class SlackConfig {
@@ -49,5 +54,16 @@ class SlackConfig {
                 .client(client)
                 .build()
                 .create(SlackService.class);
+    }
+
+    @Configuration
+    static class ConverterConfiguration implements WebMvcConfigurer {
+        @Override
+        public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
+            final SlashCommandConverter converter = new SlashCommandConverter();
+            final MediaType mediaType = MediaType.APPLICATION_FORM_URLENCODED;
+            converter.setSupportedMediaTypes(Collections.singletonList(mediaType));
+            converters.add(converter);
+        }
     }
 }

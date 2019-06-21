@@ -12,12 +12,15 @@ import javax.annotation.Nullable;
 @Builder
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-class SlackRequestBody {
+class SlashCommand {
 
     //fixme add nonnulls
 
     @JsonProperty("token")
     private final String slackToken;
+
+    @JsonProperty("response_url")
+    private final String responseUrl;
 
     @JsonProperty("team_id")
     private final String teamId;
@@ -41,10 +44,8 @@ class SlackRequestBody {
     private final String command;
 
     //command parameters
-    @JsonProperty("text")
     @Nullable
+    @JsonProperty("text")
     private final String parameters;
 
-    @JsonProperty("response_url")
-    private final String responseUrl;
 }

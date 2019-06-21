@@ -30,8 +30,8 @@ public class SlackController {
 
     @PostMapping(value = "/add", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     Single<String> addTrack(@RequestBody @Nonnull final SlashCommand command) {
-        return Single.fromCallable(() -> parseRequestParameters(command))
-                .compose(slackFacade.slackRequestValidator(command))
+        return slackFacade.validSlashCommand(command)
+                .map(SlackController::parseRequestParameters)
                 .flatMapObservable(spotifyFacade::searchTrack)
                 .firstElement()
                 .switchIfEmpty(Maybe.error(new TrackNotFound(String.format(Locale.ENGLISH, "\"%1$s\" not found",
@@ -47,8 +47,8 @@ public class SlackController {
 
     @PostMapping(value = "/remove", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     Single<String> removeTrack(@RequestBody @Nonnull final SlashCommand command) {
-        return Single.fromCallable(() -> parseRequestSongPosition(command))
-                .compose(slackFacade.slackRequestValidator(command))
+        return slackFacade.validSlashCommand(command)
+                .map(SlackController::parseRequestSongPosition)
                 .flatMap(pos -> spotifyFacade.getTrackByPosition(pos)
                         .flatMapPublisher(track -> slackFacade.findAddTrackLogsBySpotifyId(track.getSpotifyId()))
                         .switchIfEmpty(Flowable.error(new IllegalArgumentException(
@@ -59,12 +59,10 @@ public class SlackController {
                         .flatMapObservable(logs -> Observable.fromIterable(logs)
                                 .filter(addTrackLog -> addTrackLog.getSlackUserId().equals(command.getUserId()))
                                 .switchIfEmpty(slackFacade.findUserBySlackId(logs.get(0).getSlackUserId())
-                                        .flatMapObservable(
-                                                u -> Observable.<AddTrackLog>error(new IllegalAccessException(
-                                                        String.format(Locale.ENGLISH,
-                                                                "Track was added by %1$s you can ask %1$s for remove " +
-                                                                        "it.",
-                                                                u.getUsername()))))))
+                                        .flatMapObservable(u -> Observable.error(new IllegalAccessException(
+                                                String.format(Locale.ENGLISH,
+                                                        "Track was added by %1$s you can ask %1$s for remove it.",
+                                                        u.getUsername()))))))
                         .firstOrError()
                         .flatMapCompletable(log -> spotifyFacade.removeFromPlaylist(pos)
                                 .flatMapCompletable(f -> slackFacade.removeAddTrackLog(log)))
@@ -73,13 +71,13 @@ public class SlackController {
                                         command.getParameters(), LocalDateTime.now())))
                         .andThen(Single.just(
                                 String.format(Locale.ENGLISH, "Track on position %1$s has been removed.", pos + 1))))
-                        .compose(errorMessageRetriever());
+                .compose(errorMessageRetriever());
     }
 
     @PostMapping(value = "/playlist", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     protected Single<String> playlist(@RequestBody @Nonnull final SlashCommand command) {
-        return spotifyFacade.getPlaylistUrl()
-                .compose(slackFacade.slackRequestValidator(command))
+        return slackFacade.validSlashCommand(command)
+                .flatMap(c -> spotifyFacade.getPlaylistUrl())
                 .compose(errorMessageRetriever());
     }
 

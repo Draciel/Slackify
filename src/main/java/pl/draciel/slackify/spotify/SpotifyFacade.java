@@ -5,17 +5,20 @@ import io.reactivex.Observable;
 import io.reactivex.Single;
 import io.reactivex.SingleTransformer;
 import io.reactivex.annotations.SchedulerSupport;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.Base64Utils;
 import pl.draciel.slackify.Config;
 import pl.draciel.slackify.security.OAuth2Token;
 import pl.draciel.slackify.security.OAuth2TokenStore;
+import pl.draciel.slackify.security.StateGenerator;
 import pl.draciel.slackify.spotify.exceptions.TrackNotFound;
 import pl.draciel.slackify.spotify.model.Track;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -24,14 +27,16 @@ import java.util.stream.Collectors;
 import static pl.draciel.slackify.spotify.Messages.*;
 
 @Slf4j
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class SpotifyFacade {
 
+    @Nonnull
     private final Config config;
 
-    //fixme implement dynamic state
-    private final String state = "1341d4125575865f689c9e5135ba031fe961300as23fafcd";
+    @Nonnull
+    private final Object lock = new Object();
 
+    @Nonnull
     private final SpotifyService service;
 
     @Spotify
@@ -39,6 +44,13 @@ public class SpotifyFacade {
 
     @Nonnull
     private final PlaylistCache playlist = new PlaylistCache();
+
+    @Nonnull
+    private final StateGenerator stateGenerator;
+
+    @Nullable
+    @GuardedBy("lock")
+    private volatile String authState = null;
 
     @Nonnull
     @CheckReturnValue
@@ -113,13 +125,17 @@ public class SpotifyFacade {
     @Nonnull
     @CheckReturnValue
     @SchedulerSupport(SchedulerSupport.NONE)
-    public Single<String> grantTokens(String code, String state) {
-        if (!state.equals(this.state)) {
-            return Single.error(new IllegalArgumentException(INVALID_STATE.message()));
-        }
-        return service.grantTokens(SpotifyService.TOKENS_URL, encodeHeader(config.getSpotifyClientId(),
+    public Single<String> grantTokens(@Nonnull final String code, @Nonnull final String state) {
+        return Completable.fromAction(() -> {
+            synchronized (lock) {
+                if (!state.equals(authState)) {
+                    throw new IllegalArgumentException(INVALID_STATE.message());
+                }
+                authState = null;
+            }
+        }).andThen(service.grantTokens(SpotifyService.TOKENS_URL, encodeHeader(config.getSpotifyClientId(),
                 config.getSpotifyClientSecret()), SpotifyTokenGrantTypes.AUTHORIZATION_CODE, code,
-                config.getRedirectUri())
+                config.getRedirectUri()))
                 .map(response -> new OAuth2Token(response.getAccessToken(), response.getRefreshToken(),
                         LocalDateTime.now().plusSeconds(response.getExpiresIn())))
                 .flatMapCompletable(token -> Completable.fromAction(() -> updateCredentials(token)))
@@ -143,14 +159,18 @@ public class SpotifyFacade {
     @CheckReturnValue
     @SchedulerSupport(SchedulerSupport.NONE)
     public Single<String> authorize(@Nonnull final List<String> scopes) {
-        final String url = SpotifyService.AUTH_URL + "?" +
-                "client_id=" + config.getSpotifyClientId() + "&" +
-                "response_type=" + "code" + "&" +
-                "redirect_uri=" + config.getRedirectUri() + "&" +
-                "state=" + state + "&" +
-                "scope=" + String.join(" ", scopes) + "&" +
-                "show_dialog=" + false;
-        return Single.just(url);
+        return Single.fromCallable(() -> {
+            String state = authState;
+            if (state == null) {
+                synchronized (lock) {
+                    state = authState;
+                    if (state == null) {
+                        authState = state = stateGenerator.generateState();
+                    }
+                }
+            }
+            return state;
+        }).map(state -> createAuthUrl(config.getSpotifyClientId(), config.getRedirectUri(), state, scopes));
     }
 
     @Nonnull
@@ -203,6 +223,20 @@ public class SpotifyFacade {
                         .map(SpotifyFacade::map)
                         .flatMapCompletable(token -> Completable.fromAction(() -> updateCredentials(token)))
                         .andThen(Single.just(t))));
+    }
+
+    @Nonnull
+    private static String createAuthUrl(@Nonnull final String clientId,
+                                        @Nonnull final String redirectUri,
+                                        @Nonnull final String state,
+                                        @Nonnull final List<String> scopes) {
+        return SpotifyService.AUTH_URL + "?" +
+                "client_id=" + clientId + "&" +
+                "response_type=" + "code" + "&" +
+                "redirect_uri=" + redirectUri + "&" +
+                "state=" + state + "&" +
+                "scope=" + String.join(" ", scopes) + "&" +
+                "show_dialog=" + false;
     }
 
     @Nonnull

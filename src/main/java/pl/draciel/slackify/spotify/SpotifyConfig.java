@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import pl.draciel.slackify.Config;
 import pl.draciel.slackify.security.OAuth2Interceptor;
+import pl.draciel.slackify.security.StateGenerator;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.jackson.JacksonConverterFactory;
@@ -18,8 +19,9 @@ class SpotifyConfig {
     @Bean
     @Nonnull
     SpotifyFacade provideSpotifyFacade(@Nonnull final Config config, @Nonnull final SpotifyService spotifyService,
-                                       @Nonnull @Spotify final OAuth2Interceptor interceptor) {
-        return new SpotifyFacade(config, spotifyService, interceptor);
+                                       @Nonnull @Spotify final OAuth2Interceptor interceptor,
+                                       @Nonnull final StateGenerator stateGenerator) {
+        return new SpotifyFacade(config, spotifyService, interceptor, stateGenerator);
     }
 
     @Bean
@@ -47,6 +49,12 @@ class SpotifyConfig {
                 .client(client)
                 .build()
                 .create(SpotifyService.class);
+    }
+
+    @Bean
+    @Nonnull
+    StateGenerator provideStateGenerator() {
+        return StateGenerator.create();
     }
 
 }

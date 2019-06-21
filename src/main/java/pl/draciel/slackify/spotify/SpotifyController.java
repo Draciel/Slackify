@@ -27,13 +27,13 @@ class SpotifyController {
     private final SpotifyFacade spotifyFacade;
 
     @GetMapping("/authorize")
-    protected Single<RedirectView> authorize() {
+    Single<RedirectView> authorize() {
         return spotifyFacade.authorize(AUTH_SCOPES)
                 .map(RedirectView::new);
     }
 
     @GetMapping("/callback")
-    protected Completable callback(@RequestParam("code") String code, @RequestParam("state") String state) {
+    Completable callback(@RequestParam("code") String code, @RequestParam("state") String state) {
         return spotifyFacade.grantTokens(code, state)
                 .ignoreElement();
     }

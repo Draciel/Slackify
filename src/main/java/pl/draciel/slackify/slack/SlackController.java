@@ -24,7 +24,7 @@ import static pl.draciel.slackify.slack.Messages.*;
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api/v1/slack")
-public class SlackController {
+class SlackController {
 
     @Nonnull
     private final SpotifyFacade spotifyFacade;
@@ -70,7 +70,7 @@ public class SlackController {
     }
 
     @PostMapping(value = "/playlist", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    protected Single<String> playlist(@RequestBody @Nonnull final SlashCommand command) {
+    Single<String> playlist(@RequestBody @Nonnull final SlashCommand command) {
         return slackFacade.validSlashCommand(command)
                 .flatMap(c -> spotifyFacade.getPlaylistUrl())
                 .compose(errorMessageRetriever());

@@ -72,8 +72,8 @@ public class SlackController {
                                 RemoveTrackLog.of(command.getUserName(), command.getUserId(),
                                         command.getParameters(), LocalDateTime.now())))
                         .andThen(Single.just(
-                                String.format(Locale.ENGLISH, "Track on position %1$s has been removed.", pos + 1)))
-                        .compose(errorMessageRetriever()));
+                                String.format(Locale.ENGLISH, "Track on position %1$s has been removed.", pos + 1))))
+                        .compose(errorMessageRetriever());
     }
 
     @PostMapping(value = "/playlist", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)

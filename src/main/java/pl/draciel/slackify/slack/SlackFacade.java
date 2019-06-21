@@ -1,6 +1,9 @@
 package pl.draciel.slackify.slack;
 
-import io.reactivex.*;
+import io.reactivex.Completable;
+import io.reactivex.Flowable;
+import io.reactivex.Maybe;
+import io.reactivex.Single;
 import io.reactivex.annotations.SchedulerSupport;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +16,8 @@ import pl.draciel.slackify.spotify.exceptions.InvalidCredentialException;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+
+import static pl.draciel.slackify.slack.Messages.*;
 
 @Slf4j
 @AllArgsConstructor
@@ -76,7 +81,7 @@ public class SlackFacade {
         return Single.defer(() -> {
             final User user = userRepository.findBySlackUserId(slackId);
             if (user == null) {
-                return Single.error(new UserNotFound("User not found!"));
+                return Single.error(new UserNotFound(USER_NOT_FOUND.message()));
             }
             return Single.just(user);
         });
@@ -101,7 +106,7 @@ public class SlackFacade {
     @SchedulerSupport(SchedulerSupport.NONE)
     private Completable validSlackCommandToken(String token) {
         return Completable.defer(() -> config.getSlackToken().contains(token) ? Completable.complete()
-                : Completable.error(new InvalidCredentialException("Invalid slack token")));
+                : Completable.error(new InvalidCredentialException(INVALID_SLACK_TOKEN.message())));
     }
 
     @Nonnull
@@ -109,6 +114,6 @@ public class SlackFacade {
     @SchedulerSupport(SchedulerSupport.NONE)
     private Completable validTeamId(String teamId) {
         return Completable.defer(() -> config.getTeamId().equals(teamId) ? Completable.complete()
-                : Completable.error(new InvalidCredentialException("Invalid team id")));
+                : Completable.error(new InvalidCredentialException(INVALID_TEAM_ID.message())));
     }
 }

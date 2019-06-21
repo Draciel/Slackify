@@ -11,6 +11,8 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 @AllArgsConstructor
 @RestController
@@ -18,16 +20,20 @@ import java.util.Arrays;
 class SpotifyController {
 
     @Nonnull
+    private static final List<String> AUTH_SCOPES =
+            Collections.unmodifiableList(Arrays.asList("playlist-modify-public", "playlist-modify-private"));
+
+    @Nonnull
     private final SpotifyFacade spotifyFacade;
 
     @GetMapping(value = "/authorize")
     protected Single<RedirectView> authorize() {
-        return spotifyFacade.authorize(Arrays.asList("playlist-modify-public", "playlist-modify-private"))
+        return spotifyFacade.authorize(AUTH_SCOPES)
                 .map(RedirectView::new);
     }
 
     @GetMapping(value = "/callback")
-    protected Completable callback(@RequestParam String code, @RequestParam String state) {
+    protected Completable callback(@RequestParam("code") String code, @RequestParam("state") String state) {
         return spotifyFacade.grantTokens(code, state)
                 .ignoreElement();
     }

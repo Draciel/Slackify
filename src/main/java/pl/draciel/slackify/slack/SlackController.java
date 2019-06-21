@@ -4,7 +4,10 @@ import io.reactivex.*;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import pl.draciel.slackify.domain.AddTrackLog;
 import pl.draciel.slackify.domain.RemoveTrackLog;
 import pl.draciel.slackify.domain.User;
@@ -14,7 +17,8 @@ import pl.draciel.slackify.spotify.model.Track;
 
 import javax.annotation.Nonnull;
 import java.time.LocalDateTime;
-import java.util.Locale;
+
+import static pl.draciel.slackify.slack.Messages.*;
 
 @Slf4j
 @RestController
@@ -34,14 +38,12 @@ public class SlackController {
                 .map(SlackController::parseRequestParameters)
                 .flatMapObservable(spotifyFacade::searchTrack)
                 .firstElement()
-                .switchIfEmpty(Maybe.error(new TrackNotFound(String.format(Locale.ENGLISH, "\"%1$s\" not found",
-                        command.getParameters()))))
+                .switchIfEmpty(Maybe.error(new TrackNotFound(TRACK_NOT_FOUND.formatMessage(command.getParameters()))))
                 .flatMapSingle(spotifyFacade::addToPlaylist)
                 .flatMap(track -> slackFacade.saveAddTrackLog(AddTrackLog.of(command.getUserName(), command.getUserId(),
                         command.getParameters(), track.getSpotifyId(), LocalDateTime.now()))
                         .andThen(slackFacade.saveUser(User.of(command.getUserName(), command.getUserId())))
-                        .andThen(Single.just(String.format(Locale.ENGLISH, "%1$s by %2$s has been added to playlist!",
-                                track.getName(), track.getArtist()))))
+                        .andThen(Single.just(ADDED_TO_PLAYLIST.formatMessage(track.getName(), track.getArtist()))))
                 .compose(errorMessageRetriever());
     }
 
@@ -51,26 +53,19 @@ public class SlackController {
                 .map(SlackController::parseRequestSongPosition)
                 .flatMap(pos -> spotifyFacade.getTrackByPosition(pos)
                         .flatMapPublisher(track -> slackFacade.findAddTrackLogsBySpotifyId(track.getSpotifyId()))
-                        .switchIfEmpty(Flowable.error(new IllegalArgumentException(
-                                "Someone is cheating right here, track was added by "
-                                        + "SpotifyApp, you can't remove it, contact admin"
-                                        + " to force remove it ¯\\_(ツ)_/¯")))
+                        .switchIfEmpty(Flowable.error(new IllegalArgumentException(REMOVED_ILLEGAL_TRACK.message())))
                         .toList()
                         .flatMapObservable(logs -> Observable.fromIterable(logs)
                                 .filter(addTrackLog -> addTrackLog.getSlackUserId().equals(command.getUserId()))
                                 .switchIfEmpty(slackFacade.findUserBySlackId(logs.get(0).getSlackUserId())
                                         .flatMapObservable(u -> Observable.error(new IllegalAccessException(
-                                                String.format(Locale.ENGLISH,
-                                                        "Track was added by %1$s you can ask %1$s for remove it.",
-                                                        u.getUsername()))))))
+                                                TRACK_WAS_ADDED_BY.formatMessage(u.getUsername()))))))
                         .firstOrError()
                         .flatMapCompletable(log -> spotifyFacade.removeFromPlaylist(pos)
                                 .flatMapCompletable(f -> slackFacade.removeAddTrackLog(log)))
-                        .andThen(slackFacade.saveRemoveTrackLog(
-                                RemoveTrackLog.of(command.getUserName(), command.getUserId(),
-                                        command.getParameters(), LocalDateTime.now())))
-                        .andThen(Single.just(
-                                String.format(Locale.ENGLISH, "Track on position %1$s has been removed.", pos + 1))))
+                        .andThen(slackFacade.saveRemoveTrackLog(RemoveTrackLog.of(command.getUserName(),
+                                command.getUserId(), command.getParameters(), LocalDateTime.now())))
+                        .andThen(Single.just(SUCCESFULLY_REMOVED_TRACK.formatMessage(pos + 1))))
                 .compose(errorMessageRetriever());
     }
 
@@ -89,40 +84,42 @@ public class SlackController {
                     if (throwable.getMessage() != null) {
                         return Single.<String>just(throwable.getMessage());
                     }
-                    return Single.<String>just("Something went wrong, please try again later");
+                    return Single.<String>just(UNKNOWN_MESSAGE.message());
                 });
     }
 
+    @Nonnull
     private static Track parseRequestParameters(@Nonnull final SlashCommand command) {
         final String parameters = command.getParameters();
         final String[] parts = parameters.split("-");
 
         if (parts.length == 1) {
-            throw new IllegalArgumentException("Invalid request format. Please use is Artist - Track");
+            throw new IllegalArgumentException(USE_ARTIST_TRACK_FORMAT.message());
         }
 
         if (parts[0].isEmpty()) {
-            throw new IllegalArgumentException("Artist can't be empty");
+            throw new IllegalArgumentException(ARTIST_CANT_BE_EMPTY.message());
         }
 
         if (parts[1].isEmpty()) {
-            throw new IllegalArgumentException("Track can't be empty");
+            throw new IllegalArgumentException(TRACK_CANT_BE_EMPTY.message());
         }
 
         return new Track(parts[0].trim(), parts[1].trim(), null);
     }
 
+    @Nonnull
     private static Integer parseRequestSongPosition(@Nonnull final SlashCommand command) {
         final String parameters = command.getParameters();
         int pos = 0;
         try {
             pos = Integer.parseInt(parameters);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid request format. Please use number.");
+            throw new IllegalArgumentException(USE_NUMBER_FORMAT.message());
         }
 
         if (pos < 1) {
-            throw new IllegalArgumentException("Invalid track position");
+            throw new IllegalArgumentException(INVALID_TRACK_POSITION.message());
         }
 
         return pos - 1;

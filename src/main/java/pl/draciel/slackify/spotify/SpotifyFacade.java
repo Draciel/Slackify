@@ -19,8 +19,9 @@ import javax.annotation.Nonnull;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.stream.Collectors;
+
+import static pl.draciel.slackify.spotify.Messages.*;
 
 @Slf4j
 @AllArgsConstructor
@@ -60,8 +61,7 @@ public class SpotifyFacade {
     public Single<Track> addToPlaylist(@Nonnull final Track track) {
         log.debug(track.toString());
         if (playlist.anyMatches(t -> t.getSpotifyId().equals(track.getSpotifyId()))) {
-            return Single.error(new IllegalStateException(String.format(Locale.ENGLISH,
-                    "Track \"%1$s\" is already on playlist", track.getName())));
+            return Single.error(new IllegalStateException(ALREADY_ON_PLAYLIST.formatMessage(track.getName())));
         }
         return service.addTrackToPlaylist(config.getUserId(), config.getPlaylistId(),
                 Collections.singletonList("spotify:track:" + track.getSpotifyId()))
@@ -76,7 +76,7 @@ public class SpotifyFacade {
     public Single<Track> removeFromPlaylist(final int position) {
         log.debug("" + position);
         if (position < 0 || position > playlist.size()) {
-            return Single.error(new IllegalArgumentException("Invalid position!"));
+            return Single.error(new IllegalArgumentException(INVALID_POSITION.message()));
         }
         return getPlaylistData()
                 .compose(applyAutomaticAuthorization())
@@ -90,7 +90,7 @@ public class SpotifyFacade {
     @SchedulerSupport(SchedulerSupport.NONE)
     public Single<Track> getTrackByPosition(final int position) {
         if (position < 0 || position > playlist.size()) {
-            return Single.error(new IllegalArgumentException("Invalid position!"));
+            return Single.error(new IllegalArgumentException(INVALID_POSITION.message()));
         }
         return Single.just(playlist.get(position));
     }
@@ -115,14 +115,15 @@ public class SpotifyFacade {
     @SchedulerSupport(SchedulerSupport.NONE)
     public Single<String> grantTokens(String code, String state) {
         if (!state.equals(this.state)) {
-            return Single.error(new IllegalArgumentException("Invalid Request State"));
+            return Single.error(new IllegalArgumentException(INVALID_STATE.message()));
         }
         return service.grantTokens(SpotifyService.TOKENS_URL, encodeHeader(config.getSpotifyClientId(),
-                config.getSpotifyClientSecret()), SpotifyTokenGrantTypes.AUTHORIZATION_CODE, code, config.getRedirectUri())
+                config.getSpotifyClientSecret()), SpotifyTokenGrantTypes.AUTHORIZATION_CODE, code,
+                config.getRedirectUri())
                 .map(response -> new OAuth2Token(response.getAccessToken(), response.getRefreshToken(),
                         LocalDateTime.now().plusSeconds(response.getExpiresIn())))
                 .flatMapCompletable(token -> Completable.fromAction(() -> updateCredentials(token)))
-                .andThen(getPlaylistTracks(0, 100)) //fixme temporary
+                .andThen(getPlaylistTracks(0, 100))
                 .concatMap(response -> Observable.fromIterable(response.getItems()))
                 .map(spt -> {
                     final SpotifyTrack spotifyTrack = spt.getTrack();
@@ -134,15 +135,15 @@ public class SpotifyFacade {
                 .toList()
                 .flatMap(tracks -> Single.defer(() -> {
                     playlist.cleanAndAddAll(tracks);
-                    return Single.just("Granted tokens!");
+                    return Single.just(GRANTED_TOKENS.message());
                 }));
     }
 
     @Nonnull
     @CheckReturnValue
     @SchedulerSupport(SchedulerSupport.NONE)
-    public Single<String> authorize(List<String> scopes) {
-        String url = SpotifyService.AUTH_URL + "?" +
+    public Single<String> authorize(@Nonnull final List<String> scopes) {
+        final String url = SpotifyService.AUTH_URL + "?" +
                 "client_id=" + config.getSpotifyClientId() + "&" +
                 "response_type=" + "code" + "&" +
                 "redirect_uri=" + config.getRedirectUri() + "&" +
@@ -172,16 +173,22 @@ public class SpotifyFacade {
         tokenStore.setOAuthToken(token);
     }
 
+    @Nonnull
+    @CheckReturnValue
+    @SchedulerSupport(SchedulerSupport.NONE)
     private Single<AuthorizationCodeResponse> refreshAccessToken() {
-        return service.refreshToken(SpotifyService.TOKENS_URL, "Basic " + new String(Base64Utils
-                        .encode((config.getSpotifyClientId() + ":" + config.getSpotifyClientSecret())
-                                .getBytes())),
-                SpotifyTokenGrantTypes.REFRESH_TOKEN, tokenStore.getOAuthToken().getRefreshToken());
+        final OAuth2Token token = tokenStore.getOAuthToken();
+        return service.refreshToken(SpotifyService.TOKENS_URL, "Basic " + new String(
+                Base64Utils.encode((config.getSpotifyClientId() + ":" + config.getSpotifyClientSecret())
+                        .getBytes())), SpotifyTokenGrantTypes.REFRESH_TOKEN, token.getRefreshToken());
     }
 
+    @Nonnull
+    @CheckReturnValue
+    @SchedulerSupport(SchedulerSupport.NONE)
     private Single<Boolean> isAuthorised() {
         if (tokenStore.getOAuthToken() == null) {
-            return Single.error(new IllegalStateException("Authorization required"));
+            return Single.error(new IllegalStateException(AUTHORIZATION_REQUIRED.message()));
         }
         if (!LocalDateTime.now().isBefore(tokenStore.getOAuthToken().getExpires())) {
             return Single.just(false);
@@ -209,13 +216,15 @@ public class SpotifyFacade {
         return "artist:" + track.getArtist().trim() + ' ' + "track:" + track.getName().trim();
     }
 
+    @Nonnull
     private static String encodeHeader(@Nonnull final String clientId, @Nonnull final String clientSecret) {
         return "Basic " + new String(Base64Utils.encode((clientId + ":" + clientSecret).getBytes()));
     }
 
+    @Nonnull
     private static Track map(@Nonnull final SpotifyTrack spotifyTrack) {
         if (spotifyTrack.getId().isEmpty()) {
-            throw new TrackNotFound();
+            throw new TrackNotFound(TRACK_NOT_FOUND.message());
         }
         return new Track(spotifyTrack.getArtists().stream()
                 .map(SpotifyArtist::getName)

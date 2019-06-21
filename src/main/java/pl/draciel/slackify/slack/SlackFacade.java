@@ -33,7 +33,7 @@ public class SlackFacade {
     @Nonnull
     @CheckReturnValue
     @SchedulerSupport(SchedulerSupport.NONE)
-    public <T> SingleTransformer<T, T> applySlackRequestValidator(@Nonnull final SlackRequestBody body) {
+    public <T> SingleTransformer<T, T> slackRequestValidator(@Nonnull final SlackRequestBody body) {
         return upstream -> upstream.flatMapMaybe(t -> Maybe.<T>fromCompletable(
                 Completable.mergeArray(validSlackCommandToken(body.getSlackToken()),
                         validTeamId(body.getTeamId()))).defaultIfEmpty(t))

@@ -3,10 +3,7 @@ package pl.draciel.slackify.spotify;
 import io.reactivex.Completable;
 import io.reactivex.Single;
 import lombok.AllArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 
 import javax.annotation.Nonnull;
@@ -21,7 +18,8 @@ class SpotifyController {
 
     @Nonnull
     private static final List<String> AUTH_SCOPES =
-            Collections.unmodifiableList(Arrays.asList("playlist-modify-public", "playlist-modify-private"));
+            Collections.unmodifiableList(Arrays.asList("playlist-modify-public", "playlist-modify-private",
+                    "user-modify-playback-state"));
 
     @Nonnull
     private final SpotifyFacade spotifyFacade;
@@ -37,4 +35,15 @@ class SpotifyController {
         return spotifyFacade.grantTokens(code, state)
                 .ignoreElement();
     }
+
+    @PostMapping("/resume")
+    Completable resumeStartPlayer() {
+        return spotifyFacade.resumeStartPlayer();
+    }
+
+    @PostMapping("/pause")
+    Completable pausePlayer() {
+        return spotifyFacade.pausePlayer();
+    }
+
 }

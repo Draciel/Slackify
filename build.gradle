@@ -71,6 +71,7 @@ buildConfig {
     buildConfigField "String", "PLAYLIST_ID", getValueFromLocalProperties("APP_KEYS_PLAYLIST_ID", "")
     buildConfigField "String", "TEAM_ID", getValueFromLocalProperties("APP_KEYS_TEAM_ID", "")
     buildConfigField "String", "SLACK_TOKEN", getValueFromLocalProperties("APP_KEYS_SLACK_TOKEN", "")
+    buildConfigField "String", "SPOTIFY_DEBUG_ACCESS_TOKEN", getValueFromLocalProperties("APP_KEYS_SPOTIFY_DEBUG_ACCESS_TOKEN", "")
 }
 
 

@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.time.LocalDateTime;
 
 @Data
@@ -13,7 +14,7 @@ public final class OAuth2Token {
     @Nonnull
     private final String accessToken;
 
-    @Nonnull
+    @Nullable
     private final String refreshToken;
 
     @Nonnull

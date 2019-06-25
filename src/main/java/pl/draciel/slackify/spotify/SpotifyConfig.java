@@ -5,13 +5,13 @@ import okhttp3.logging.HttpLoggingInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import pl.draciel.slackify.Config;
-import pl.draciel.slackify.security.OAuth2Interceptor;
-import pl.draciel.slackify.security.StateGenerator;
+import pl.draciel.slackify.security.*;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.jackson.JacksonConverterFactory;
 
 import javax.annotation.Nonnull;
+import java.time.LocalDateTime;
 
 @Configuration
 class SpotifyConfig {
@@ -21,6 +21,11 @@ class SpotifyConfig {
     SpotifyFacade provideSpotifyFacade(@Nonnull final Config config, @Nonnull final SpotifyService spotifyService,
                                        @Nonnull @Spotify final OAuth2Interceptor interceptor,
                                        @Nonnull final StateGenerator stateGenerator) {
+        if (config.getSpotifyDebugAccessToken() != null && !config.getSpotifyDebugAccessToken().isEmpty()) {
+            final OAuth2Token token = new OAuth2Token(config.getSpotifyDebugAccessToken(), null,
+                    LocalDateTime.now().plusMinutes(30));
+            interceptor.setOAuthToken(token);
+        }
         return new SpotifyFacade(config, spotifyService, interceptor, stateGenerator);
     }
 

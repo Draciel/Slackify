@@ -41,4 +41,7 @@ public class Config {
 
     @Nonnull
     private final String slackToken;
+
+    @Nullable
+    private final String spotifyDebugAccessToken;
 }

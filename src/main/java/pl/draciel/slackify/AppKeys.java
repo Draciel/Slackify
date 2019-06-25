@@ -14,6 +14,7 @@ public final class AppKeys {
     public static final String PLAYLIST_ID = "APP_KEYS_PLAYLIST_ID";
     public static final String TEAM_ID = "APP_KEYS_TEAM_ID";
     public static final String SLACK_TOKEN = "APP_KEYS_SLACK_TOKEN";
+    public static final String SPOTIFY_DEBUG_ACCESS_TOKEN = "APP_KEYS_SPOTIFY_DEBUG_ACCESS_TOKEN";
 
     private AppKeys() {
         //no instance

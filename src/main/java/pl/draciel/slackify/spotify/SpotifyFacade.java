@@ -136,8 +136,7 @@ public class SpotifyFacade {
         }).andThen(service.grantTokens(SpotifyService.TOKENS_URL, encodeHeader(config.getSpotifyClientId(),
                 config.getSpotifyClientSecret()), SpotifyTokenGrantTypes.AUTHORIZATION_CODE, code,
                 config.getRedirectUri()))
-                .map(response -> new OAuth2Token(response.getAccessToken(), response.getRefreshToken(),
-                        LocalDateTime.now().plusSeconds(response.getExpiresIn())))
+                .map(SpotifyFacade::map)
                 .flatMapCompletable(token -> Completable.fromAction(() -> updateCredentials(token)))
                 .andThen(getPlaylistTracks(0, 100))
                 .concatMap(response -> Observable.fromIterable(response.getItems()))
@@ -171,6 +170,20 @@ public class SpotifyFacade {
             }
             return state;
         }).map(state -> createAuthUrl(config.getSpotifyClientId(), config.getRedirectUri(), state, scopes));
+    }
+
+    @Nonnull
+    @CheckReturnValue
+    @SchedulerSupport(SchedulerSupport.NONE)
+    public Completable resumeStartPlayer() {
+        return Completable.defer(() -> service.resumeStartPlayer(null));
+    }
+
+    @Nonnull
+    @CheckReturnValue
+    @SchedulerSupport(SchedulerSupport.NONE)
+    public Completable pausePlayer() {
+        return Completable.defer(() -> service.pausePlayer(null));
     }
 
     @Nonnull

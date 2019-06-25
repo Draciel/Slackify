@@ -1,5 +1,6 @@
 package pl.draciel.slackify.spotify;
 
+import io.reactivex.Completable;
 import io.reactivex.Single;
 import retrofit2.http.*;
 
@@ -52,4 +53,12 @@ interface SpotifyService {
     Single<AuthorizationCodeResponse> refreshToken(@Url String url,
             @Header("Authorization") String basic, @Field("grant_type") SpotifyTokenGrantTypes grantTypes,
             @Field("refresh_token") String refreshToken);
+
+    @PUT(value = "/v1/me/player/pause")
+    Completable pausePlayer(@Nullable @Query("device_id") String deviceId);
+
+    //todo add optional RequestBody for starting different song
+    @PUT(value = "/v1/me/player/play")
+    Completable resumeStartPlayer(@Nullable @Query("device_id") String deviceId);
+
 }

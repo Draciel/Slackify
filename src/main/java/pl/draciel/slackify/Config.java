@@ -44,4 +44,8 @@ public class Config {
 
     @Nullable
     private final String spotifyDebugAccessToken;
+
+    @Nullable
+    private final String token;
+
 }

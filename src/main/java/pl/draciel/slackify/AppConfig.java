@@ -24,6 +24,7 @@ class AppConfig {
                     .teamId(System.getenv(AppKeys.TEAM_ID))
                     .slackToken(System.getenv(AppKeys.SLACK_TOKEN))
                     .spotifyDebugAccessToken(System.getenv(AppKeys.SPOTIFY_DEBUG_ACCESS_TOKEN))
+                    .token(System.getenv(AppKeys.TOKEN))
                     .build();
         }
 
@@ -37,6 +38,7 @@ class AppConfig {
                 .teamId(BuildConfig.TEAM_ID)
                 .slackToken(BuildConfig.SLACK_TOKEN)
                 .spotifyDebugAccessToken(BuildConfig.SPOTIFY_DEBUG_ACCESS_TOKEN)
+                .token(BuildConfig.TOKEN)
                 .build();
     }
 }

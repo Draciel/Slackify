@@ -14,6 +14,7 @@ import pl.draciel.slackify.security.OAuth2TokenStore;
 import pl.draciel.slackify.security.StateGenerator;
 import pl.draciel.slackify.spotify.exceptions.TrackNotFound;
 import pl.draciel.slackify.spotify.model.Track;
+import pl.draciel.slackify.utility.StringUtil;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -270,7 +271,7 @@ public class SpotifyFacade {
 
     @Nonnull
     private static Track map(@Nonnull final SpotifyTrack spotifyTrack) {
-        if (spotifyTrack.getId().isEmpty()) {
+        if (StringUtil.isNullOrEmpty(spotifyTrack.getId())) {
             throw new TrackNotFound(TRACK_NOT_FOUND.message());
         }
         return new Track(spotifyTrack.getArtists().stream()

@@ -14,6 +14,7 @@ import pl.draciel.slackify.domain.User;
 import pl.draciel.slackify.spotify.SpotifyFacade;
 import pl.draciel.slackify.spotify.exceptions.TrackNotFound;
 import pl.draciel.slackify.spotify.model.Track;
+import pl.draciel.slackify.utility.StringUtil;
 
 import javax.annotation.Nonnull;
 import java.time.LocalDateTime;
@@ -97,11 +98,11 @@ class SlackController {
             throw new IllegalArgumentException(USE_ARTIST_TRACK_FORMAT.message());
         }
 
-        if (parts[0].isEmpty()) {
+        if (StringUtil.isNullOrEmpty(parts[0])) {
             throw new IllegalArgumentException(ARTIST_CANT_BE_EMPTY.message());
         }
 
-        if (parts[1].isEmpty()) {
+        if (StringUtil.isNullOrEmpty(parts[1])) {
             throw new IllegalArgumentException(TRACK_CANT_BE_EMPTY.message());
         }
 

@@ -1,9 +1,6 @@
 package pl.draciel.slackify.spotify;
 
-import io.reactivex.Completable;
-import io.reactivex.Observable;
-import io.reactivex.Single;
-import io.reactivex.SingleTransformer;
+import io.reactivex.*;
 import io.reactivex.annotations.SchedulerSupport;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +10,7 @@ import pl.draciel.slackify.security.OAuth2Token;
 import pl.draciel.slackify.security.OAuth2TokenStore;
 import pl.draciel.slackify.security.StateGenerator;
 import pl.draciel.slackify.spotify.exceptions.TrackNotFound;
+import pl.draciel.slackify.spotify.model.Device;
 import pl.draciel.slackify.spotify.model.Track;
 import pl.draciel.slackify.utility.StringUtil;
 
@@ -141,13 +139,7 @@ public class SpotifyFacade {
                 .flatMapCompletable(token -> Completable.fromAction(() -> updateCredentials(token)))
                 .andThen(getPlaylistTracks(0, 100))
                 .concatMap(response -> Observable.fromIterable(response.getItems()))
-                .map(spt -> {
-                    final SpotifyTrack spotifyTrack = spt.getTrack();
-                    return new Track(spotifyTrack.getArtists().stream()
-                            .map(SpotifyArtist::getName)
-                            .collect(Collectors.joining(" & ")), spotifyTrack.getName(),
-                            spotifyTrack.getId());
-                })
+                .map(spt -> map(spt.getTrack()))
                 .toList()
                 .flatMap(tracks -> Single.defer(() -> {
                     playlist.cleanAndAddAll(tracks);
@@ -176,17 +168,40 @@ public class SpotifyFacade {
     @Nonnull
     @CheckReturnValue
     @SchedulerSupport(SchedulerSupport.NONE)
-    public Completable resumeStartPlayer() {
-        return Completable.defer(() -> service.resumeStartPlayer(null));
+    public Completable playPlayer(@Nullable final String deviceId) {
+        return Completable.defer(() -> service.play(deviceId))
+                .compose(applyAutomaticAuthorizationCompletable());
     }
 
     @Nonnull
     @CheckReturnValue
     @SchedulerSupport(SchedulerSupport.NONE)
-    public Completable pausePlayer() {
-        return Completable.defer(() -> service.pausePlayer(null));
+    public Completable pausePlayer(@Nullable final String deviceId) {
+        return Completable.defer(() -> service.pause(deviceId))
+                .compose(applyAutomaticAuthorizationCompletable());
     }
 
+    @Nonnull
+    @CheckReturnValue
+    @SchedulerSupport(SchedulerSupport.NONE)
+    public Single<List<Device>> getUserDevices() {
+        return service.getSpotifyDevices()
+                .map(GetUserDevicesResponse::getDevices)
+                .flatMapObservable(Observable::fromIterable)
+                .map(SpotifyFacade::map)
+                .toList()
+                .compose(applyAutomaticAuthorization());
+    }
+
+    @Nonnull
+    @CheckReturnValue
+    @SchedulerSupport(SchedulerSupport.NONE)
+    public Completable transferPlayback(@Nonnull final String deviceId) {
+        return service.transferPlayback(new TransferPlaybackRequest(Collections.singletonList(deviceId), true))
+                .compose(applyAutomaticAuthorizationCompletable());
+    }
+
+    //fixme apply auto-ath before publish
     @Nonnull
     @CheckReturnValue
     @SchedulerSupport(SchedulerSupport.NONE)
@@ -240,6 +255,14 @@ public class SpotifyFacade {
     }
 
     @Nonnull
+    private CompletableTransformer applyAutomaticAuthorizationCompletable() {
+        return upstream -> upstream
+                .andThen(isAuthorised().flatMapCompletable(is -> is ? Completable.complete() : refreshAccessToken()
+                        .map(SpotifyFacade::map)
+                        .flatMapCompletable(token -> Completable.fromAction(() -> updateCredentials(token)))));
+    }
+
+    @Nonnull
     private static String createAuthUrl(@Nonnull final String clientId,
                                         @Nonnull final String redirectUri,
                                         @Nonnull final String state,
@@ -277,5 +300,11 @@ public class SpotifyFacade {
         return new Track(spotifyTrack.getArtists().stream()
                 .map(SpotifyArtist::getName)
                 .collect(Collectors.joining(", ")), spotifyTrack.getName(), spotifyTrack.getId());
+    }
+
+    @Nonnull
+    private static Device map(@Nonnull final SpotifyDevice spotifyDevice) {
+        return new Device(spotifyDevice.getId(), spotifyDevice.isActive(), spotifyDevice.getName(),
+                spotifyDevice.getType().getType(), spotifyDevice.getCurrentVolume());
     }
 }

@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 import pl.draciel.slackify.Config;
+import pl.draciel.slackify.spotify.model.Device;
 import pl.draciel.slackify.utility.StringUtil;
 
 import javax.annotation.CheckReturnValue;
@@ -17,7 +18,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-import static pl.draciel.slackify.spotify.Messages.*;
+import static pl.draciel.slackify.spotify.Messages.AUTHORIZATION_REQUIRED;
 
 @AllArgsConstructor
 @RestController
@@ -47,16 +48,31 @@ class SpotifyController {
                 .ignoreElement();
     }
 
-    @PostMapping("/resume")
-    Completable resumeStartPlayer(@RequestParam("token") @Nullable final String token) {
+    @PostMapping("/play")
+    Completable playPlayer(@RequestParam("token") @Nullable final String token,
+                           @RequestParam("device_id") @Nullable final String deviceId) {
         return validateToken(token)
-                .andThen(spotifyFacade.resumeStartPlayer());
+                .andThen(spotifyFacade.playPlayer(deviceId));
     }
 
     @PostMapping("/pause")
-    Completable pausePlayer(@RequestParam("token") @Nullable final String token) {
+    Completable pausePlayer(@RequestParam("token") @Nullable final String token,
+                            @RequestParam("device_id") @Nullable final String deviceId) {
         return validateToken(token)
-                .andThen(spotifyFacade.pausePlayer());
+                .andThen(spotifyFacade.pausePlayer(deviceId));
+    }
+
+    @GetMapping("/devices")
+    Single<List<Device>> getUserDevices(@RequestParam("token") @Nullable final String token) {
+        return validateToken(token)
+                .andThen(spotifyFacade.getUserDevices());
+    }
+
+    @PostMapping("/transfer")
+    Completable transferPlayback(@RequestParam("token") @Nullable final String token,
+                                 @RequestParam("device_id") @Nonnull final String deviceId) {
+        return validateToken(token)
+                .andThen(spotifyFacade.transferPlayback(deviceId));
     }
 
     @Nonnull
@@ -68,5 +84,6 @@ class SpotifyController {
         }
         return Completable.error(new IllegalStateException(AUTHORIZATION_REQUIRED.message()));
     }
+
 
 }
